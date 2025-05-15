@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/api/v1/auth/spotify")
@@ -82,6 +83,34 @@ public class AuthController {
             logger.error("Error during Spotify token exchange: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body("Error: An unexpected error occurred during Spotify login.");
         }
+    }
+
+    // Used to check if the user is currently logged in the current HTTP session
+    @GetMapping("/status")
+    public ResponseEntity<Map<String, Object>> getLoginStatus(HttpSession session) {
+        boolean isLoggedIn = spotifyAuthService.isUserLoggedIn(session);
+        if (isLoggedIn) {
+            String displayName = (String) session.getAttribute(SpotifyAuthService.SPOTIFY_USER_DISPLAY_NAME_KEY);
+            String userId = (String) session.getAttribute(SpotifyAuthService.SPOTIFY_USER_ID_KEY);
+            return ResponseEntity.ok(Map.of(
+                    "loggedIn", true,
+                    "message", "Successfully logged into Spotify!",
+                    "userDisplayName", displayName != null ? displayName : "N/A",
+                    "userId", userId != null ? userId : "N/A",
+                    "sessionId", session.getId()));
+        } else {
+            return ResponseEntity.ok(Map.of(
+                    "loggedIn", false,
+                    "message", "Not logged into Spotify. <a href='/api/v1/auth/spotify/login'>Login here</a>",
+                    "sessionId", session.getId()));
+        }
+    }
+
+    // Simple logout endpoint
+    @GetMapping("/logout")
+    public String getMethodName(HttpSession session) {
+        spotifyAuthService.clearTokens(session);
+        return "User logged out";
     }
 
     private String generateState() {
