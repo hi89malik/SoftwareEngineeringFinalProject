@@ -9,4 +9,4 @@ public class WeatherPlaylistApplication {
     public static void main(String[] args) {
         SpringApplication.run(WeatherPlaylistApplication.class, args);
     }
-}
+}   

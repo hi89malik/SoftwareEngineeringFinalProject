@@ -1,0 +1,4 @@
+.vscode/
+WeatherifyFrontEnd/node_modules/
+weatherify/src/main/resources/
+weatherify/target/classes/application.properties

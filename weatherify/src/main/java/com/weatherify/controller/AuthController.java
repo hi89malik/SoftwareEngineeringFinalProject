@@ -41,6 +41,8 @@ public class AuthController {
 
     @GetMapping("/login")
     public void spotifyLogin(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession();
+        spotifyAuthService.clearTokens(session);
         String state = generateState();
         request.getSession().setAttribute(SPOTIFY_STATE_KEY, state);
 
