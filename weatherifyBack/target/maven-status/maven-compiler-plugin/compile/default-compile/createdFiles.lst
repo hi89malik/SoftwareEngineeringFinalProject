@@ -1,1 +1,8 @@
+com\weatherify\config\AppConfig.class
+com\weatherify\service\PlaylistGenerationService.class
+com\weatherify\controller\PlaylistController$PlaylistRequest.class
+com\weatherify\service\SpotifyAuthService.class
 com\weatherify\config\WebConfig.class
+com\weatherify\controller\AuthController.class
+com\weatherify\controller\PlaylistController.class
+com\weatherify\WeatherPlaylistApplication.class

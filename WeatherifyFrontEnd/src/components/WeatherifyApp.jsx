@@ -26,34 +26,42 @@ export default function WeatherifyApp() {
     setTimeout(() => setShowPopup(false), 3000);
   };
 
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      const { latitude, longitude } = position.coords;
-      try {
-        const weatherRes = await fetch(
-          `https://api.weatherapi.com/v1/current.json?key=${WEATHER_API_KEY}&q=${latitude},${longitude}`
-        );
-        const weatherData = await weatherRes.json();
-        setCityName(weatherData.location.name);
-
-        const condition = weatherData.current.condition.text.toLowerCase();
-        const precip = weatherData.current.precip_mm;
-        const cloud = weatherData.current.cloud;
-
-        if (precip >= 1.0) {
-          setWeatherIcon("rainy");
-        } else if (cloud >= 60) {
-          setWeatherIcon("cloudy");
-        } else if (cloud < 60 && precip === 0) {
-          setWeatherIcon("sunny");
-        } else {
-          setWeatherIcon(null);
-        }
-      } catch (err) {
-        console.error("Failed to fetch weather data", err);
-      }
+const fetchAndSetWeather = async () => {
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject);
     });
-  }, []);
+    const { latitude, longitude } = position.coords;
+
+    const weatherRes = await fetch(
+      `https://api.weatherapi.com/v1/current.json?key=${WEATHER_API_KEY}&q=${latitude},${longitude}`
+    );
+    const weatherData = await weatherRes.json();
+
+    setCityName(weatherData.location.name);
+
+    const precip = weatherData.current.precip_mm;
+    const cloud = weatherData.current.cloud;
+
+    if (precip >= 1.0) {
+      setWeatherIcon("rainy");
+    } else if (cloud >= 60) {
+      setWeatherIcon("cloudy");
+    } else if (cloud < 60 && precip === 0) {
+      setWeatherIcon("sunny");
+    } else {
+      setWeatherIcon(null);
+    }
+  } catch (err) {
+    console.error("Failed to fetch weather data", err);
+  }
+};
+
+
+  useEffect(() => {
+  fetchAndSetWeather();
+}, []);
+
 
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
@@ -92,6 +100,9 @@ export default function WeatherifyApp() {
       setIsLoggedIn(true);
       setIsLoading(false);
       triggerPopup("Login successful!");
+      
+      fetchAndSetWeather();
+      
       if (window.history.replaceState) {
         const url = new URL(window.location.href);
         url.searchParams.delete("login_success");
@@ -119,10 +130,40 @@ export default function WeatherifyApp() {
     window.location.href = `${BACKEND_URL}/api/v1/auth/spotify/login`;
   };
 
-  const handleGenerateClick = () => {
-    console.log("Generate button clicked!");
-    triggerPopup("In progress!");
-  };
+const handleGenerateClick = async () => {
+  if (!weatherIcon) {
+    triggerPopup("Weather data not ready yet, please try again.");
+    return;
+  }
+
+  console.log("Sending weather to backend:", weatherIcon);
+  triggerPopup("In progress!");
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/v1/playlist/generate`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ weather: weatherIcon }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      triggerPopup("Playlist created and music started!");
+      console.log("Playlist URL:", data.playlistUrl);
+      window.open(data.playlistUrl, "_blank");
+    } else {
+      triggerPopup(data.message || "Failed to create playlist.");
+    }
+  } catch (err) {
+    console.error("Generate error:", err);
+    triggerPopup("An error occurred while generating the playlist.");
+  }
+};
+
 
   const handleLogoutClick = async () => {
     try {
