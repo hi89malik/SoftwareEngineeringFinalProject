@@ -1,4 +1,3 @@
-// src/components/WeatherifyApp.jsx
 import React, { useState, useEffect } from "react";
 import {
   IconSun,
@@ -10,9 +9,9 @@ import {
 import "../styles/weatherify.css";
 
 const BACKEND_URL = "http://127.0.0.1:8080";
-const WEATHER_API_KEY = "9187915b62104c3ca2d44021251505";
 
 export default function WeatherifyApp() {
+  const [zip, setZip] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [popupMessage, setPopupMessage] = useState("");
@@ -26,69 +25,60 @@ export default function WeatherifyApp() {
     setTimeout(() => setShowPopup(false), 3000);
   };
 
-const fetchAndSetWeather = async () => {
-  try {
-    const position = await new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject);
-    });
-    const { latitude, longitude } = position.coords;
+  const fetchAndSetWeather = async () => {
+    try {
+      let url;
+      if (zip) {
+        url = `${BACKEND_URL}/api/v1/weather/current?zip=${zip}`;
+      } else {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+        const { latitude, longitude } = position.coords;
+        url = `${BACKEND_URL}/api/v1/weather/current?lat=${latitude}&lon=${longitude}`;
+      }
 
-    const weatherRes = await fetch(
-      `https://api.weatherapi.com/v1/current.json?key=${WEATHER_API_KEY}&q=${latitude},${longitude}`
-    );
-    const weatherData = await weatherRes.json();
+      const response = await fetch(url, {
+        method: "GET",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(`Weather API error: ${response.status}`);
+      }
 
-    setCityName(weatherData.location.name);
-
-    const precip = weatherData.current.precip_mm;
-    const cloud = weatherData.current.cloud;
-
-    if (precip >= 1.0) {
-      setWeatherIcon("rainy");
-    } else if (cloud >= 60) {
-      setWeatherIcon("cloudy");
-    } else if (cloud < 60 && precip === 0) {
-      setWeatherIcon("sunny");
-    } else {
-      setWeatherIcon(null);
+      const { city, icon } = await response.json();
+      setCityName(city);
+      setWeatherIcon(icon);
+    } catch (err) {
+      console.error("Failed to fetch weather data", err);
+      triggerPopup("Could not retrieve weather.");
     }
-  } catch (err) {
-    console.error("Failed to fetch weather data", err);
-  }
-};
+  };
 
-
+  // Initial weather fetch on mount
   useEffect(() => {
-  fetchAndSetWeather();
-}, []);
+    fetchAndSetWeather();
+  }, []);
 
-
+  // Handle login flow
   useEffect(() => {
-    const queryParams = new URLSearchParams(window.location.search);
-    const loginSuccess = queryParams.get("login_success");
-    const loginError = queryParams.get("login_error");
+    const params = new URLSearchParams(window.location.search);
+    const loginSuccess = params.get("login_success");
+    const loginError = params.get("login_error");
 
     const checkLoginStatus = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`${BACKEND_URL}/api/v1/auth/spotify/status`, {
-          method: 'GET',
-          credentials: 'include',
+        const res = await fetch(`${BACKEND_URL}/api/v1/auth/spotify/status`, {
+          credentials: "include",
         });
-        if (response.ok) {
-          const data = await response.json();
+        if (res.ok) {
+          const data = await res.json();
           setIsLoggedIn(data.loggedIn);
-          if (data.loggedIn) {
-            console.log("User is logged in (session active). User:", data.userDisplayName);
-          } else {
-            console.log("User is not logged in (no active session).");
-          }
         } else {
-          console.error("Failed to check login status:", response.status, await response.text());
           setIsLoggedIn(false);
         }
-      } catch (error) {
-        console.error("Error checking login status:", error);
+      } catch {
         setIsLoggedIn(false);
       } finally {
         setIsLoading(false);
@@ -96,97 +86,90 @@ const fetchAndSetWeather = async () => {
     };
 
     if (loginSuccess === "true") {
-      console.log("Login successful callback detected from URL.");
       setIsLoggedIn(true);
       setIsLoading(false);
       triggerPopup("Login successful!");
-      
       fetchAndSetWeather();
-      
-      if (window.history.replaceState) {
-        const url = new URL(window.location.href);
-        url.searchParams.delete("login_success");
-        url.searchParams.delete("login_error");
-        window.history.replaceState({ path: url.href }, '', url.href);
-      }
+
+      const url = new URL(window.location.href);
+      url.searchParams.delete("login_success");
+      url.searchParams.set("login", "true");
+      window.history.replaceState({}, "", url.href);
+
     } else if (loginError) {
-      console.error("Login error detected from URL:", loginError);
       setIsLoggedIn(false);
       setIsLoading(false);
       triggerPopup(`Login failed: ${loginError}`);
-      if (window.history.replaceState) {
-        const url = new URL(window.location.href);
-        url.searchParams.delete("login_success");
-        url.searchParams.delete("login_error");
-        window.history.replaceState({ path: url.href }, '', url.href);
-      }
+      const url = new URL(window.location.href);
+      url.searchParams.delete("login_error");
+      window.history.replaceState({}, "", url.href);
+
     } else {
       checkLoginStatus();
     }
   }, []);
 
-  const handleLoginClick = () => {
-    console.log(`Redirecting to backend for Spotify login: ${BACKEND_URL}/api/v1/auth/spotify/login`);
-    window.location.href = `${BACKEND_URL}/api/v1/auth/spotify/login`;
-  };
-
-const handleGenerateClick = async () => {
-  if (!weatherIcon) {
-    triggerPopup("Weather data not ready yet, please try again.");
-    return;
-  }
-
-  console.log("Sending weather to backend:", weatherIcon);
-  triggerPopup("In progress!");
-
-  try {
-    const response = await fetch(`${BACKEND_URL}/api/v1/playlist/generate`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ weather: weatherIcon }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      triggerPopup("Playlist created and music started!");
-      console.log("Playlist URL:", data.playlistUrl);
-      window.open(data.playlistUrl, "_blank");
-    } else {
-      triggerPopup(data.message || "Failed to create playlist.");
+  // Keep 'login' param in sync
+  useEffect(() => {
+    if (!isLoading) {
+      const url = new URL(window.location.href);
+      if (isLoggedIn) url.searchParams.set("login", "true");
+      else url.searchParams.delete("login");
+      window.history.replaceState({}, "", url.href);
     }
-  } catch (err) {
-    console.error("Generate error:", err);
-    triggerPopup("An error occurred while generating the playlist.");
-  }
-};
+  }, [isLoggedIn, isLoading]);
 
-
+  const handleLoginClick = () =>
+    (window.location.href = `${BACKEND_URL}/api/v1/auth/spotify/login`);
   const handleLogoutClick = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/v1/auth/spotify/logout`, {
-        method: 'GET',
-        credentials: 'include',
+      const res = await fetch(`${BACKEND_URL}/api/v1/auth/spotify/logout`, {
+        credentials: "include",
       });
-      if (response.ok) {
+      if (res.ok) {
         setIsLoggedIn(false);
         triggerPopup("Successfully logged out.");
       } else {
         triggerPopup("Logout failed.");
       }
-    } catch (err) {
-      console.error("Logout error:", err);
+    } catch {
       triggerPopup("An error occurred during logout.");
+    }
+  };
+
+  const handleGenerateClick = async () => {
+    if (!weatherIcon) {
+      triggerPopup("Weather data not ready yet—please try again.");
+      return;
+    }
+    triggerPopup("In progress!");
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/v1/playlist/generate`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weather: weatherIcon }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        triggerPopup("Playlist created and music started!");
+        window.open(data.playlistUrl, "_blank");
+      } else {
+        triggerPopup(data.message || "Failed to create playlist.");
+      }
+    } catch {
+      triggerPopup("An error occurred while generating the playlist.");
     }
   };
 
   if (isLoading) {
     return (
-      <div className="weatherify-container" style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }}>
-        <p style={{ fontSize: '24px', color: '#333' }}>Loading...</p>
+      <div
+        className="weatherify-container"
+        style={{ display: "flex", justifyContent: "center", alignItems: "center" }}
+      >
+        <p style={{ fontSize: "24px", color: "#333" }}>Loading...</p>
       </div>
     );
   }
@@ -200,44 +183,59 @@ const handleGenerateClick = async () => {
       )}
 
       <div className="weatherify-container">
+        {/* ZIP code input + button, only visible when logged in */}
+        {isLoggedIn && (
+          <div className="zip-input-container" style={{ marginBottom: "1rem" }}>
+            <input
+              type="text"
+              value={zip}
+              placeholder="Enter ZIP code"
+              onChange={(e) => setZip(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") fetchAndSetWeather();
+              }}
+              style={{ padding: "0.3rem", fontSize: "0.9rem", marginRight: "0.5rem" }}
+            />
+            <button
+              onClick={fetchAndSetWeather}
+              style={{ padding: "0.3rem 0.8rem", fontSize: "0.9rem" }}
+            >
+              Set Location
+            </button>
+          </div>
+        )}
+
+        {/* Weather icons */}
         <div className="weather-buttons">
-          <button
-            aria-label="Sunny weather"
-            className="weather-icon-button"
-            disabled={weatherIcon !== "sunny"}
-          >
+          <button aria-label="Sunny" className="weather-icon-button" disabled={weatherIcon !== "sunny"}>
             <IconSun size="48" />
           </button>
-          <button
-            aria-label="Cloudy weather"
-            className="weather-icon-button"
-            disabled={weatherIcon !== "cloudy"}
-          >
+          <button aria-label="Cloudy" className="weather-icon-button" disabled={weatherIcon !== "cloudy"}>
             <IconCloud size="48" />
           </button>
-          <button
-            aria-label="Rainy weather"
-            className="weather-icon-button"
-            disabled={weatherIcon !== "rainy"}
-          >
+          <button aria-label="Rainy" className="weather-icon-button" disabled={weatherIcon !== "rainy"}>
             <IconCloudRain size="48" />
           </button>
         </div>
 
+        {/* Main card */}
         <div className="weatherify-card">
           <h1 className="weatherify-title">Weatherify</h1>
-          <p className="weatherify-subtitle">Generate a playlist based on weather{cityName ? ` in ${cityName}` : ""}</p>
-          <div className="login-button-container" style={{ flexDirection: 'column', alignItems: 'center' }}>
+          <p className="weatherify-subtitle">
+            Generate a playlist based on weather{cityName ? ` in ${cityName}` : ""}
+          </p>
+          <div
+            className="login-button-container"
+            style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+          >
             {!isLoggedIn ? (
               <button className="login-button" onClick={handleLoginClick}>
-                <IconPerson size="24" />
-                Login
+                <IconPerson size="24" /> Login
               </button>
             ) : (
               <>
                 <button className="generate-button" onClick={handleGenerateClick}>
-                  <IconUpload size="24" />
-                  Generate
+                  <IconUpload size="24" /> Generate
                 </button>
                 <button className="logout-button" onClick={handleLogoutClick}>
                   Logout
