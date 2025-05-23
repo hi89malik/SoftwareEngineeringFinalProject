@@ -1,3 +1,4 @@
+/*
 package com.weatherify.service;
 
 import jakarta.servlet.http.HttpSession;
@@ -78,3 +79,4 @@ public class PlaylistService {
         return playlist.getExternalUrls().get("spotify");
     }
 }
+*/
