@@ -1,7 +1,3 @@
-Here is the revised `README.md` content formatted as plain text, without emojis or decorative characters:
-
----
-
 # Weatherify
 
 A full-stack application that generates Spotify playlists based on current weather conditions using React (frontend) and Spring Boot (backend).
