@@ -2,6 +2,10 @@
 # Weatherify
 A React + Spring Boot application that generates Spotify playlists based on your local weather.
 
+# What Each File Is
+weatherifyFrontEnd - contains front-end logic for the Weatherify site. Contains the user interface as well as logic for button redirection.
+weatherifyBack - contains back-end logic for the Weatherify site. Makes calls to Spotify and Weather API in order to retrieve necessary data for operations such as user log-in to Spotify, weather detection, and playlist generation (playlist generation not currently working).
+
 ---
 
 ## Getting Started (Local Setup)
