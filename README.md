@@ -93,7 +93,7 @@ The frontend will run at: `http://localhost:5173`
 ```properties
 spotify.client.id=your_client_id
 spotify.client.secret=your_client_secret
-spotify.redirect.uri=http://localhost:8080/api/v1/auth/spotify/callback
+spotify.redirect.uri=http://127.0.0.1:8080/api/v1/auth/spotify/callback
 weatherapi.key=your_weatherapi_key
 ```
 
