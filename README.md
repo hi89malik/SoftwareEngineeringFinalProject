@@ -1,188 +1,130 @@
+Here is the revised `README.md` content formatted as plain text, without emojis or decorative characters:
+
+---
 
 # Weatherify
-A React + Spring Boot application that generates Spotify playlists based on your local weather.
 
-# What Each File Is
-weatherifyFrontEnd - contains front-end logic for the Weatherify site. Contains the user interface as well as logic for button redirection.
-weatherifyBack - contains back-end logic for the Weatherify site. Makes calls to Spotify and Weather API in order to retrieve necessary data for operations such as user log-in to Spotify, weather detection, and playlist generation (playlist generation not currently working).
+A full-stack application that generates Spotify playlists based on current weather conditions using React (frontend) and Spring Boot (backend).
 
 ---
 
-## Getting Started (Local Setup)
+## Overview
 
-### Prerequisites
+This project is composed of two main components:
 
-To run this project locally, make sure you install the following:
-
-### 1. Node.js & npm
-- Download & install from: https://nodejs.org
-- After installation, verify:
-  ```bash
-  node -v
-  npm -v
-  ```
-
-### 2. Java 17 or higher
-- Download Java JDK (Oracle): https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html
-- Set JAVA_HOME environment variable correctly.
-- Verify:
-  ```bash
-  java -version
-  ```
-
-### 3. Maven
-- Download & install: https://maven.apache.org/download.cgi
-- Add to your system path.
-- Verify:
-  ```bash
-  mvn -v
-  ```
-
-### 4. Execution Policy (Windows)
-To enable scripts and permissions:
-- Open PowerShell as Administrator
-- Run:
-  ```powershell
-  Set-ExecutionPolicy RemoteSigned
-  ```
-
----
-
-## Running the App Locally
-
-### Frontend (React + Vite)
-```bash
-# Navigate to the frontend folder
-cd weatherify-frontend
-
-# Install dependencies
-npm install
-
-# Start the dev server
-npm run dev
-```
-
-Your frontend will run at: `http://localhost:5173`
-
-### Backend (Java Spring Boot)
-```bash
-# Navigate to the backend folder
-cd weatherifyBack
-
-# Build and run the Spring Boot app
-mvn spring-boot:run
-```
-
-Your backend will run at: `http://localhost:8080`
-
----
-
-## API Keys Required
-
-### WeatherAPI Key
-- Create an account at: https://www.weatherapi.com
-- Add your key to the frontend file:
-  ```js
-  const WEATHER_API_KEY = "YOUR_API_KEY";
-  ```
-
-### Spotify Web API
-- Register your app at: https://developer.spotify.com/dashboard
-- Add these to `application.properties` (backend):
-  ```properties
-  spotify.client.id=your_client_id
-  spotify.client.secret=your_client_secret
-  spotify.redirect.uri=http://localhost:8080/api/v1/auth/spotify/callback
-  ```
-
----
-
-## API Integration Overview
-
-### WeatherAPI (Frontend)
-Used directly in React to:
-- Detect user's location using browser's geolocation.
-- Fetch real-time weather conditions.
-- Determine which weather icon to highlight:
-  - Sunny → Pop & Rock
-  - Cloudy → Classical & Jazz
-  - Rainy → R&B & Blues
-- API Endpoint:
-  ```
-  https://api.weatherapi.com/v1/current.json?key=YOUR_KEY&q=latitude,longitude
-  ```
-
-### Spotify Web API (Backend)
-Used in Spring Boot to:
-- Authenticate the user via OAuth.
-- Store session-based access and refresh tokens.
-- Later (optional): Generate playlists based on weather genres.
-- Key endpoints:
-  - `/api/v1/auth/spotify/login`
-  - `/api/v1/auth/spotify/callback`
-  - `/api/v1/auth/spotify/status`
-  - `/api/v1/auth/spotify/logout`
-
----
-
-## Frontend Functionality Explained
-
-### useEffect – Weather Fetching
-On component mount:
-- Grabs geolocation.
-- Calls WeatherAPI.
-- Based on `precip_mm` and `cloud` values:
-  - Sets `weatherIcon` to one of: `"sunny"`, `"cloudy"`, `"rainy"`.
-
-### useEffect – Spotify Login Check
-- Checks for login success/error in URL.
-- If session is already active, hits `/status` from the backend to confirm.
-
-### Button Behavior
-- Login: Redirects to backend login, starts Spotify OAuth.
-- Generate: Placeholder for future playlist generation logic.
-- Logout: Clears session on backend, resets frontend state.
-
----
-
-## UI Features
-
-- Large centered weather icon buttons (sun, cloud, rain)
-- Disabled buttons based on current weather condition
-- Subtitle displays current city
-- Login/Logout state-aware buttons
-- In-browser popups for:
-  - Login success/failure
-  - Logout
-  - Generate status
+* **weatherifyFront**: The frontend built with React and Vite.
+* **weatherifyBack**: The backend built using Java Spring Boot.
 
 ---
 
 ## Project Structure
 
 ```
-weatherify/
-├── weatherify-frontend/
+WeatherifyFinalProjectSubmission/
+├── weatherifyFront/
 │   ├── src/
-│   │   ├── components/
-│   │   │   └── WeatherifyApp.jsx
-│   │   ├── styles/
-│   │   │   └── weatherify.css
-│   └── index.html
+│   │   ├── components/         # Contains WeatherifyApp UI logic
+│   │   ├── icons/              # Icon components (e.g., sun, rain, cloud)
+│   │   ├── primitives/         # UI primitives like Button, IconButton
+│   │   ├── styles/             # Custom CSS for layout
+│   │   └── index.jsx           # Entry point
+│   └── public/                 # Public assets
 │
 ├── weatherifyBack/
 │   ├── src/main/java/com/weatherify/
-│   │   ├── controller/
-│   │   ├── service/
-│   │   └── WeatherPlaylistApplication.java
+│   │   ├── config/             # Spotify API config and CORS setup
+│   │   ├── controller/         # REST controllers (auth, weather, playlist)
+│   │   ├── service/            # Service logic for Spotify and weather APIs
+│   │   ├── util/               # Weather-to-genre mapping logic
+│   │   └── WeatherPlaylistApplication.java # Main application entry
 │   └── resources/
-│       └── application.properties
+│       ├── application.properties  # Contains Spotify/Weather API keys
+│       └── genres_dict.json        # Mapping from weather to genre list
 ```
+
+---
+
+## Prerequisites
+
+Install the following tools before running the app:
+
+* Node.js and npm: [https://nodejs.org](https://nodejs.org)
+* Java 17 or higher: [https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
+* Maven: [https://maven.apache.org](https://maven.apache.org)
+
+Verify installation with:
+
+```bash
+node -v
+npm -v
+java -version
+mvn -v
+```
+
+---
+
+## Running the Application
+
+### Backend (Spring Boot)
+
+```bash
+cd weatherifyBack
+mvn spring-boot:run
+```
+
+The backend will run at: `http://localhost:8080`
+
+### Frontend (React + Vite)
+
+```bash
+cd weatherifyFront
+npm install
+npm run dev
+```
+
+The frontend will run at: `http://localhost:5173`
+
+---
+
+## API Keys Setup
+
+### File: `weatherifyBack/src/main/resources/application.properties`
+
+```properties
+spotify.client.id=your_client_id
+spotify.client.secret=your_client_secret
+spotify.redirect.uri=http://localhost:8080/api/v1/auth/spotify/callback
+weatherapi.key=your_weatherapi_key
+```
+
+### File: `weatherifyFront/src/components/WeatherifyApp.jsx`
+
+Add your WeatherAPI key in this file if needed for frontend weather fetches.
+
+---
+
+## Backend API Endpoints
+
+* `GET /api/v1/auth/spotify/login` – Initiates Spotify login
+* `GET /api/v1/auth/spotify/callback` – Handles OAuth callback
+* `GET /api/v1/auth/spotify/status` – Checks user login status
+* `POST /api/v1/playlist/generate` – Generates playlist (in development)
+* `GET /api/v1/weather` – Returns current weather info
+
+---
+
+## Frontend Features
+
+* Weather-based visual UI (sun, cloud, rain icons)
+* Spotify login/logout functionality
+* Location-based weather fetching
+* Popups for login success/failure
+* "Generate Playlist" button (currently non-functional or under development)
 
 ---
 
 ## Notes
 
-- Currently, the playlist "Generate" button is a placeholder and shows a popup.
-- The app handles state with React hooks and user auth via backend sessions.
-- Spotify playlist creation can be added once OAuth and tokens are fully set up.
+* The "Generate Playlist" feature is currently a placeholder.
+* Session-based authentication is used for Spotify login via backend.
+* Weather information is used to suggest genres and potentially build playlists.
