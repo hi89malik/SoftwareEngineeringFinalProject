@@ -42,24 +42,35 @@ public class SpotifyAuthService {
      * @return true if successful, false otherwise.
      */
     public boolean exchangeCodeForTokens(String code, HttpSession session) {
+        String shortCode = code.substring(0, Math.min(code.length(), 10)) + "..."; // For logging
+
         try {
+            logger.info("Session ID [{}]: Attempting to exchange code [{}] for tokens.", session.getId(), shortCode);
             AuthorizationCodeRequest authorizationCodeRequest = spotifyApi.authorizationCode(code).build();
+
+            logger.debug("Session ID [{}]: Making token request to Spotify with code [{}].", session.getId(),
+                    shortCode);
             AuthorizationCodeCredentials credentials = authorizationCodeRequest.execute();
+
+            String shortAccessToken = credentials.getAccessToken().substring(0,
+                    Math.min(credentials.getAccessToken().length(), 10)) + "...";
+            logger.info("Session ID [{}]: Successfully exchanged code [{}] for tokens. Access token starts with: [{}].",
+                    session.getId(), shortCode, shortAccessToken);
 
             session.setAttribute(SPOTIFY_ACCESS_TOKEN_KEY, credentials.getAccessToken());
             session.setAttribute(SPOTIFY_REFRESH_TOKEN_KEY, credentials.getRefreshToken());
             long expiresInMillis = TimeUnit.SECONDS.toMillis(credentials.getExpiresIn());
             session.setAttribute(SPOTIFY_TOKEN_EXPIRY_TIME_KEY, System.currentTimeMillis() + expiresInMillis);
 
-            // Fetch and store user ID
-            SpotifyApi userSpecificApi = new SpotifyApi.Builder()
-                    .setAccessToken(credentials.getAccessToken())
-                    .build();
-            User user = userSpecificApi.getCurrentUsersProfile().build().execute();
-            session.setAttribute(SPOTIFY_USER_ID_KEY, user.getId());
-            session.setAttribute(SPOTIFY_USER_DISPLAY_NAME_KEY, user.getDisplayName());
+            // // Fetch and store user ID
+            // SpotifyApi userSpecificApi = new SpotifyApi.Builder()
+            // .setAccessToken(credentials.getAccessToken())
+            // .build();
+            // User user = userSpecificApi.getCurrentUsersProfile().build().execute();
+            // session.setAttribute(SPOTIFY_USER_ID_KEY, user.getId());
+            // session.setAttribute(SPOTIFY_USER_DISPLAY_NAME_KEY, user.getDisplayName());
 
-            logger.info("Spotify tokens obtained and stored for user: {}", user.getId());
+            // logger.info("Spotify tokens obtained and stored for user: {}", user.getId());
             return true;
 
         } catch (IOException | SpotifyWebApiException | ParseException e) {

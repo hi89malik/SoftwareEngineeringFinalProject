@@ -1,9 +1,8 @@
 package com.weatherify.controller;
 
 import com.weatherify.service.SpotifyAuthService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,12 +25,11 @@ import java.util.Map;
 public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
-
-    // Key used to store the anti-CSRF state in session
     private static final String SPOTIFY_STATE_KEY = "spotify_auth_state";
+    private static final String SCOPES =
+        "playlist-read-private playlist-modify-public playlist-modify-private user-read-private user-read-email";
 
-    // Scopes determine what Spotify data your app can access
-    private static final String SCOPES = "playlist-read-private playlist-modify-public playlist-modify-private user-read-private user-read-email";
+    private static final String FRONTEND_BASE = "http://localhost:5173";
 
     private final SpotifyApi spotifyApi;
     private final SpotifyAuthService spotifyAuthService;
@@ -42,94 +40,70 @@ public class AuthController {
         this.spotifyAuthService = spotifyAuthService;
     }
 
-    // Redirects the user to Spotify's authorization page
     @GetMapping("/login")
-    public void spotifyLogin(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String state = generateState(); // CSRF protection
-        request.getSession().setAttribute(SPOTIFY_STATE_KEY, state);
+    public void spotifyLogin(HttpSession session, HttpServletResponse response) throws IOException {
+        spotifyAuthService.clearTokens(session);
+        String state = generateState();
+        session.setAttribute(SPOTIFY_STATE_KEY, state);
 
-        // Build the Spotify authorization URI
-        AuthorizationCodeUriRequest authorizationCodeUriRequest = spotifyApi.authorizationCodeUri()
-                .scope(SCOPES)
-                .state(state)
-                .show_dialog(true) // Always show login prompt
-                .build();
+        AuthorizationCodeUriRequest uriRequest = spotifyApi.authorizationCodeUri()
+            .scope(SCOPES)
+            .state(state)
+            .show_dialog(true)
+            .build();
 
-        URI uri = authorizationCodeUriRequest.execute();
-        logger.info("Redirecting to Spotify for authorization: {}", uri);
+        URI uri = uriRequest.execute();
+        logger.info("Redirecting to Spotify: {}", uri);
         response.sendRedirect(uri.toString());
     }
 
-    // Spotify redirects here after the user logs in
     @GetMapping("/callback")
-    public ResponseEntity<?> spotifyCallback(
-            @RequestParam("code") String code,
-            @RequestParam("state") String returnedState,
-            HttpSession session,
-            HttpServletResponse response) throws IOException {
-
-        logger.info("Received callback from Spotify with code: {} and state: {}", code, returnedState);
-
-        // Validate the state to prevent CSRF attacks
+    public void spotifyCallback(
+        @RequestParam("code") String code,
+        @RequestParam("state") String returnedState,
+        HttpSession session,
+        HttpServletResponse response
+    ) throws IOException {
         String storedState = (String) session.getAttribute(SPOTIFY_STATE_KEY);
-        if (storedState == null || !storedState.equals(returnedState)) {
-            logger.error("State mismatch. Stored: {}, Returned: {}", storedState, returnedState);
-            response.sendRedirect("http://localhost:5173/?login_error=state_mismatch");
-            return null;
-        }
-
-        // Clean up stored state
         session.removeAttribute(SPOTIFY_STATE_KEY);
 
-        // Try to exchange the authorization code for access and refresh tokens
-        try {
-            boolean success = spotifyAuthService.exchangeCodeForTokens(code, session);
-            if (success) {
-                logger.info("Successfully obtained and stored Spotify tokens for session ID: {}", session.getId());
-                response.sendRedirect("http://localhost:5173/?login_success=true");
-            } else {
-                response.sendRedirect("http://localhost:5173/?login_error=token_failure");
-            }
-        } catch (Exception e) {
-            logger.error("Error during Spotify token exchange: {}", e.getMessage(), e);
-            response.sendRedirect("http://localhost:5173/?login_error=exception");
+        if (storedState == null || !storedState.equals(returnedState)) {
+            logger.error("State mismatch. Stored: {}, Returned: {}", storedState, returnedState);
+            response.sendRedirect(FRONTEND_BASE + "/?login_error=state_mismatch");
+            return;
         }
-        return null;
-    }
 
-    // Frontend uses this endpoint to check if the user is logged in
-    @GetMapping("/status")
-    public ResponseEntity<Map<String, Object>> getLoginStatus(HttpSession session) {
-        boolean isLoggedIn = spotifyAuthService.isUserLoggedIn(session);
-        if (isLoggedIn) {
-            String displayName = (String) session.getAttribute(SpotifyAuthService.SPOTIFY_USER_DISPLAY_NAME_KEY);
-            String userId = (String) session.getAttribute(SpotifyAuthService.SPOTIFY_USER_ID_KEY);
-            return ResponseEntity.ok(Map.of(
-                    "loggedIn", true,
-                    "message", "Successfully logged into Spotify!",
-                    "userDisplayName", displayName != null ? displayName : "N/A",
-                    "userId", userId != null ? userId : "N/A",
-                    "sessionId", session.getId()));
+        boolean success = spotifyAuthService.exchangeCodeForTokens(code, session);
+        if (success) {
+            logger.info("Login successful for session {}", session.getId());
+            response.sendRedirect(FRONTEND_BASE + "/?login_success=true");
         } else {
-            return ResponseEntity.ok(Map.of(
-                    "loggedIn", false,
-                    "message", "Not logged into Spotify.",
-                    "sessionId", session.getId()));
+            logger.error("Token exchange failed for session {}", session.getId());
+            response.sendRedirect(FRONTEND_BASE + "/?login_error=token_exchange_failed");
         }
     }
 
-    // Logs the user out by clearing tokens from the session
-    @GetMapping("/logout")
-    public ResponseEntity<?> logout(HttpSession session) {
-        spotifyAuthService.clearTokens(session);
-        return ResponseEntity.ok("User logged out");
+    @GetMapping("/status")
+    public ResponseEntity<Map<String,Object>> getStatus(HttpSession session) {
+        boolean loggedIn = spotifyAuthService.isUserLoggedIn(session);
+        return ResponseEntity.ok(Map.of(
+            "loggedIn", loggedIn
+        ));
     }
 
-    // Helper to generate a secure random state string
+    @GetMapping("/logout")
+    public ResponseEntity<Map<String,Object>> logout(HttpSession session) {
+        spotifyAuthService.clearTokens(session);
+        logger.info("Cleared Spotify session for {}", session.getId());
+        return ResponseEntity.ok(Map.of(
+            "loggedOut", true
+        ));
+    }
+
     private String generateState() {
-        SecureRandom random = new SecureRandom();
-        byte[] stateBytes = new byte[16];
-        random.nextBytes(stateBytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(stateBytes);
+        SecureRandom rnd = new SecureRandom();
+        byte[] bytes = new byte[16];
+        rnd.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }

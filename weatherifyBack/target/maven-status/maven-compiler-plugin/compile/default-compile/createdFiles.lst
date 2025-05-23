@@ -1,8 +1,10 @@
-com\weatherify\config\AppConfig.class
-com\weatherify\service\PlaylistGenerationService.class
-com\weatherify\controller\PlaylistController$PlaylistRequest.class
-com\weatherify\service\SpotifyAuthService.class
+com\weatherify\service\WeatherResponse$Location.class
+com\weatherify\service\PlaylistService.class
+com\weatherify\util\WeatherToGenres.class
+com\weatherify\controller\WeatherController.class
+com\weatherify\service\WeatherResponse$Current.class
+com\weatherify\service\WeatherService.class
+com\weatherify\controller\WeatherController$WeatherIcon.class
 com\weatherify\config\WebConfig.class
-com\weatherify\controller\AuthController.class
 com\weatherify\controller\PlaylistController.class
-com\weatherify\WeatherPlaylistApplication.class
+com\weatherify\service\WeatherResponse.class
