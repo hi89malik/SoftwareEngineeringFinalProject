@@ -21,10 +21,8 @@ public class SpotifyAuthService {
     private static final Logger logger = LoggerFactory.getLogger(SpotifyAuthService.class);
 
     public static final String SPOTIFY_ACCESS_TOKEN_KEY = "spotify_access_token";
-    public static final String SPOTIFY_REFRESH_TOKEN_KEY = "spotify_refresh_token";
-    public static final String SPOTIFY_TOKEN_EXPIRY_TIME_KEY = "spotify_token_expiry_time";
-    public static final String SPOTIFY_USER_ID_KEY = "spotify_user_id";
-    public static final String SPOTIFY_USER_DISPLAY_NAME_KEY = "spotify_user_display_name";
+    // public static final String SPOTIFY_USER_ID_KEY = "spotify_user_id";
+    // public static final String SPOTIFY_USER_DISPLAY_NAME_KEY = "spotify_user_display_name";
 
     private final SpotifyApi spotifyApi;
 
@@ -58,9 +56,6 @@ public class SpotifyAuthService {
                     session.getId(), shortCode, shortAccessToken);
 
             session.setAttribute(SPOTIFY_ACCESS_TOKEN_KEY, credentials.getAccessToken());
-            session.setAttribute(SPOTIFY_REFRESH_TOKEN_KEY, credentials.getRefreshToken());
-            long expiresInMillis = TimeUnit.SECONDS.toMillis(credentials.getExpiresIn());
-            session.setAttribute(SPOTIFY_TOKEN_EXPIRY_TIME_KEY, System.currentTimeMillis() + expiresInMillis);
 
             // // Fetch and store user ID
             // SpotifyApi userSpecificApi = new SpotifyApi.Builder()
@@ -80,9 +75,7 @@ public class SpotifyAuthService {
     }
 
     public boolean isUserLoggedIn(HttpSession session) {
-        return session.getAttribute(SPOTIFY_ACCESS_TOKEN_KEY) != null &&
-                session.getAttribute(SPOTIFY_REFRESH_TOKEN_KEY) != null &&
-                session.getAttribute(SPOTIFY_USER_ID_KEY) != null;
+        return session.getAttribute(SPOTIFY_ACCESS_TOKEN_KEY) != null;
     }
 
     public void clearTokens(HttpSession session) {
