@@ -80,9 +80,6 @@ public class SpotifyAuthService {
 
     public void clearTokens(HttpSession session) {
         session.removeAttribute(SPOTIFY_ACCESS_TOKEN_KEY);
-        session.removeAttribute(SPOTIFY_REFRESH_TOKEN_KEY);
-        session.removeAttribute(SPOTIFY_TOKEN_EXPIRY_TIME_KEY);
-        session.removeAttribute(SPOTIFY_USER_ID_KEY);
         logger.info("Cleared Spotify tokens for session ID: {}", session.getId());
     }
 }
